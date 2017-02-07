@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace TestAnythingProtocol.Parser
+namespace NetTAP
 {
 	public enum TestResult
 	{
@@ -25,7 +25,6 @@ namespace TestAnythingProtocol.Parser
 
 	public class TestAnythingProtocolParser
 	{
-		// TODO make it work with dots in thje names
 		private static readonly Regex s_testInformation = new Regex(@"(?<status>^(not )?ok\b)\s*(?<index>[0-9]*)\s*-\s*(?<description>[\w\s\.]*\b)\s*#?\s*(?<directive>[\w\s]*\b)?");
 		private static readonly Regex s_yamlStartBlock = new Regex(@"(^\s)?---");
 		private static readonly Regex s_yamlEndBlock = new Regex(@"(^\s)?\.\.\.");
@@ -35,12 +34,12 @@ namespace TestAnythingProtocol.Parser
 
 		private readonly List<TAPModel> m_results = new List<TAPModel>();
 
-		private StreamReader m_streamReader = null;
-		private Timer m_pollTimer;
+		private readonly StreamReader m_streamReader;
+		private readonly Timer m_pollTimer;
 		public TestAnythingProtocolParser(Stream stream)
 		{
 			m_streamReader = new StreamReader(stream);
-			m_pollTimer = new Timer(ProcessTAP);
+			m_pollTimer = new Timer(ProcessTAP, null,Timeout.Infinite, Timeout.Infinite);
 		}
 
 		public void Start()
@@ -94,7 +93,6 @@ namespace TestAnythingProtocol.Parser
 
 				uint index;
 				uint.TryParse(matches.Groups["index"].Value, out index);
-
 
 				m_results.Add(new TAPModel
 				{
