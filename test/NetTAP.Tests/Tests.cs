@@ -1,5 +1,9 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
 using Xunit;
 using NetTAP;
 
@@ -7,6 +11,76 @@ namespace NetTAP.Tests
 {
 	public class Tests
 	{
+		public class MockAsyncStream : Stream
+		{
+			private byte[] m_content;
+			private Random m_random;
+			private int m_position = 0;
+
+			public MockAsyncStream(string content)
+			{
+				m_random = new Random(1234); // "Random"
+				m_content = Encoding.UTF8.GetBytes(content);
+			}
+
+			public override void Flush()
+			{
+				throw new System.NotImplementedException();
+			}
+
+			public override bool CanRead => true;
+			public override bool CanSeek => false;
+			public override bool CanWrite => false;
+
+			public override long Length
+			{
+				get { throw new System.NotImplementedException(); }
+			}
+
+			public override long Position
+			{
+				get
+				{
+					throw new System.NotImplementedException();
+				}
+				set
+				{
+					throw new System.NotImplementedException();
+				}
+			}
+
+			public override void Write(byte[] buffer, int offset, int count)
+			{
+				throw new System.NotImplementedException();
+			}
+
+			public override void SetLength(long value)
+			{
+				throw new System.NotImplementedException();
+			}
+
+			public override long Seek(long offset, SeekOrigin origin)
+			{
+				throw new System.NotImplementedException();
+			}
+
+			public override int Read(byte[] buffer, int offset, int count)
+			{
+				if (m_position == m_content.Length)
+					return 0;
+
+				int bytesToRead = m_random.Next(1, count);
+				bytesToRead = Math.Min(bytesToRead, m_content.Length - m_position);
+
+				int recieveTime = m_random.Next(1, 100);
+				Thread.Sleep(recieveTime);
+
+				Buffer.BlockCopy(m_content, m_position, buffer, offset, bytesToRead);
+				m_position += bytesToRead;
+				return bytesToRead;
+			}
+		}
+
 		public MemoryStream CreateMemoryStream(string content)
 		{
 			var stream = new MemoryStream();
@@ -46,6 +120,38 @@ namespace NetTAP.Tests
 
 			var firstTest = results.First();
 			Assert.True(firstTest.Description == "Input file opened");
+		}
+
+		[Fact]
+		public void ParsesAsyncStream()
+		{
+			var tapContent = "TAP version 13\r\n" +
+					"1..4\r\n" +
+					"ok 1 - Input file opened\r\n" +
+					"not ok 2 - First line of the input valid\r\n" +
+					"  ---\r\n" +
+					"  message: \'First line invalid\'\r\n" +
+					"  severity: fail\r\n" +
+					"  data:\r\n" +
+					"    got: \'Flirble\'\r\n" +
+					"    expect: \'Fnible\'\r\n" +
+					"  ...\r\n" +
+					"ok 3 - Read the rest of the file\r\n" +
+					"not ok 4 - Summarized correctly # TODO Not written yet\r\n" +
+					"  ---\r\n" +
+					"  message: \"Can\'t make summary yet\"\r\n" +
+					"  severity: todo\r\n" +
+					"  ...";
+
+			var parser = new TestAnythingProtocolParser(new MockAsyncStream(tapContent));
+			var results = parser.Parse().ToList();
+
+			Assert.True(results.Count == 4, "Expected count is 4");
+
+			var thirdResult = results[3];
+			Assert.True(thirdResult.Description == "Summarized correctly");
+			Assert.True(thirdResult.Directive == "TODO Not written yet");
+			Assert.False(String.IsNullOrEmpty(thirdResult.YAML), "Expected to contain YAML content.");
 		}
 	}
 }

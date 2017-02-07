@@ -34,8 +34,6 @@ namespace NetTAP
 		private bool m_parsingYaml;
 		private string m_yamlContent = String.Empty;
 
-		
-
 		private readonly StreamReader m_streamReader;
 		private Task m_parseTask;
 		public TestAnythingProtocolParser(Stream stream)
