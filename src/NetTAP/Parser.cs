@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace NetTAP
 {
@@ -32,35 +34,35 @@ namespace NetTAP
 		private bool m_parsingYaml;
 		private string m_yamlContent = String.Empty;
 
-		private readonly List<TAPModel> m_results = new List<TAPModel>();
+		
 
 		private readonly StreamReader m_streamReader;
-		private readonly Timer m_pollTimer;
+		private Task m_parseTask;
 		public TestAnythingProtocolParser(Stream stream)
 		{
-			m_streamReader = new StreamReader(stream);
-			m_pollTimer = new Timer(ProcessTAP, null,Timeout.Infinite, Timeout.Infinite);
+			m_streamReader = new StreamReader(stream, Encoding.UTF8);
 		}
 
-		public void Start()
+		public IEnumerable<TAPModel> Parse()
 		{
-			m_pollTimer.Change(TimeSpan.Zero, TimeSpan.FromSeconds(1));
-		}
+			var results = new List<TAPModel>();
 
-		public void Stop()
-		{
-			m_pollTimer.Change(Timeout.Infinite, Timeout.Infinite);
-		}
-
-		private void ProcessTAP(object state)
-		{
-			while (m_streamReader.Peek() >= 0)
+			var line = m_streamReader.ReadLine();
+			while (line != null)
 			{
-				ParseLine(m_streamReader.ReadLine());
+				ParseLine(line, results);
+				line = m_streamReader.ReadLine();
 			}
+
+			return results;
 		}
 
-		private void ParseLine(string line)
+		public Task<IEnumerable<TAPModel>> ParseAsync()
+		{
+			return Task.Run(() => Parse());
+		}
+
+		private void ParseLine(string line, List<TAPModel> results)
 		{
 			if (s_yamlStartBlock.IsMatch(line))
 			{
@@ -74,7 +76,7 @@ namespace NetTAP
 				if (s_yamlEndBlock.IsMatch(line))
 				{
 					m_parsingYaml = false;
-					m_results.Last().YAML = m_yamlContent;
+					results.Last().YAML = m_yamlContent;
 					return;
 				}
 
@@ -94,7 +96,7 @@ namespace NetTAP
 				uint index;
 				uint.TryParse(matches.Groups["index"].Value, out index);
 
-				m_results.Add(new TAPModel
+				results.Add(new TAPModel
 				{
 					Status = status,
 					Index = index,
@@ -104,7 +106,5 @@ namespace NetTAP
 				});
 			}
 		}
-
-		public IEnumerable<TAPModel> GetResults() { return m_results; }
 	}
 }
