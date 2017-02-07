@@ -7,6 +7,17 @@ namespace NetTAP.Tests
 {
 	public class Tests
 	{
+		public MemoryStream CreateMemoryStream(string content)
+		{
+			var stream = new MemoryStream();
+			var streamWriter = new StreamWriter(stream);
+			streamWriter.Write(content);
+			streamWriter.Flush();
+			stream.Position = 0;
+
+			return stream;
+		}
+
 		[Fact]
 		public void ParsesBasicFileContent()
 		{
@@ -28,12 +39,7 @@ namespace NetTAP.Tests
 								"  severity: todo\r\n" +
 								"  ...";
 
-			var stream = new MemoryStream();
-			var streamWriter = new StreamWriter(stream);
-			streamWriter.Write(tapContent);
-			streamWriter.Flush();
-			stream.Position = 0; 
-			var parser = new TestAnythingProtocolParser(stream);
+			var parser = new TestAnythingProtocolParser(CreateMemoryStream(tapContent));
 			var results = parser.Parse().ToList();
 
 			Assert.True(results.Count == 4, "Expected count is 4");
