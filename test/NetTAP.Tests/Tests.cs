@@ -151,7 +151,8 @@ namespace NetTAP.Tests
 			var thirdResult = results[3];
 			Assert.True(thirdResult.Description == "Summarized correctly");
 			Assert.True(thirdResult.Directive == "TODO Not written yet");
-			Assert.False(String.IsNullOrEmpty(thirdResult.YAML), "Expected to contain YAML content.");
+			Assert.False(String.IsNullOrEmpty(thirdResult.YAML["message"]), "Expected to contain YAML content.");
+			Assert.Equal(thirdResult.YAML["message"], "Can't make summary yet");
 		}
 	}
 }

@@ -4,8 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
+using YamlDotNet.Core;
+using YamlDotNet.Serialization;
+
 
 namespace NetTAP
 {
@@ -22,12 +24,16 @@ namespace NetTAP
 		public uint Index { get; set; }
 		public string Description { get; set; }
 		public string Directive { get; set; }
-		public string YAML { get; set; }
+		public dynamic YAML { get; set; }
+		public string YAMLError { get; set; }
 	}
 
 	public class TestAnythingProtocolParser
 	{
-		private static readonly Regex s_testInformation = new Regex(@"(?<status>^(not )?ok\b)\s*(?<index>[0-9]*)\s*-\s*(?<description>[\w\s\.]*\b)\s*#?\s*(?<directive>[\w\s]*\b)?");
+		private static readonly Regex s_testInformation =
+			new Regex(
+				@"(?<status>^(not )?ok\b)\s*(?<index>[0-9]*)\s*-\s*(?<description>[\w\s\.]*\b)\s*#?\s*(?<directive>[\w\s]*\b)?");
+
 		private static readonly Regex s_yamlStartBlock = new Regex(@"(^\s)?---");
 		private static readonly Regex s_yamlEndBlock = new Regex(@"(^\s)?\.\.\.");
 
@@ -35,7 +41,8 @@ namespace NetTAP
 		private string m_yamlContent = String.Empty;
 
 		private readonly StreamReader m_streamReader;
-		private Task m_parseTask;
+		private readonly Deserializer m_deserializer = new Deserializer();
+
 		public TestAnythingProtocolParser(Stream stream)
 		{
 			m_streamReader = new StreamReader(stream, Encoding.UTF8);
@@ -74,11 +81,23 @@ namespace NetTAP
 				if (s_yamlEndBlock.IsMatch(line))
 				{
 					m_parsingYaml = false;
-					results.Last().YAML = m_yamlContent;
+					try
+					{
+						using (TextReader tr = new StringReader(m_yamlContent))
+						{
+							results.Last().YAML = m_deserializer.Deserialize(tr);
+						}
+					}
+					catch (SemanticErrorException e)
+					{
+						results.Last().YAML = null;
+						results.Last().YAMLError = e.Message;
+					}
+
 					return;
 				}
 
-				m_yamlContent += line;
+				m_yamlContent += line + "\n";
 				return;
 			}
 
