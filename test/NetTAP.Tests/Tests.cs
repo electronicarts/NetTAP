@@ -154,5 +154,22 @@ namespace NetTAP.Tests
 			Assert.False(String.IsNullOrEmpty(thirdResult.YAML["message"]), "Expected to contain YAML content.");
 			Assert.Equal(thirdResult.YAML["message"], "Can't make summary yet");
 		}
+
+		[Fact]
+		public void ParsesMissingTest()
+		{
+			var tapContent = "TAP version 13\n" +
+					"1..3\n" +
+					"ok 1\n" +
+					"not ok 2\n";
+
+			var parser = new TestAnythingProtocolParser(CreateMemoryStream(tapContent));
+			var results = parser.Parse().ToList();
+
+			Assert.True(results.Count == 3, "Expected count to be 3 even though only two tests were reported");
+			var thirdResult = results[2];
+
+			Assert.True(thirdResult.Status == TestResult.Skipped);
+		}
 	}
 }
