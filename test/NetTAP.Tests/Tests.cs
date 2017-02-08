@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -112,9 +112,9 @@ namespace NetTAP.Tests
 								"  ...";
 
 			var parser = new TestAnythingProtocolParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse().ToList();
+			var results = parser.Parse().Tests.ToList();
 
-			Assert.True(results.Count == 4, "Expected count is 4");
+			Assert.Equal(4, results.Count);
 
 			var firstTest = results.First();
 			Assert.True(firstTest.Description == "Input file opened");
@@ -142,15 +142,15 @@ namespace NetTAP.Tests
 					"  ...";
 
 			var parser = new TestAnythingProtocolParser(new MockAsyncStream(tapContent));
-			var results = parser.Parse().ToList();
+			var results = parser.Parse().Tests.ToList();
 
 			Assert.True(results.Count == 4, "Expected count is 4");
 
-			var thirdResult = results[3];
-			Assert.True(thirdResult.Description == "Summarized correctly");
-			Assert.True(thirdResult.Directive == "TODO Not written yet");
-			Assert.False(String.IsNullOrEmpty(thirdResult.YAML["message"]), "Expected to contain YAML content.");
-			Assert.Equal(thirdResult.YAML["message"], "Can't make summary yet");
+			var fourthResult = results[3];
+			Assert.Equal("Summarized correctly", fourthResult.Description);
+			Assert.Equal("Not written yet", fourthResult.Directive);
+			Assert.False(String.IsNullOrEmpty(fourthResult.YAML["message"]), "Expected to contain YAML content.");
+			Assert.Equal(fourthResult.YAML["message"], "Can't make summary yet");
 		}
 
 		[Fact]
@@ -162,12 +162,31 @@ namespace NetTAP.Tests
 					"not ok 2\n";
 
 			var parser = new TestAnythingProtocolParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse().ToList();
+			var results = parser.Parse().Tests.ToList();
 
 			Assert.True(results.Count == 3, "Expected count to be 3 even though only two tests were reported");
 			var thirdResult = results[2];
 
-			Assert.True(thirdResult.Status == TestResult.Skipped);
+			Assert.True(thirdResult.Status == TestResult.NotOk);
+		}
+
+		[Fact]
+		public void ParseTodoDirective()
+		{
+			var tapContent = "TAP version 13\n" +
+					"1..2\n" +
+					"ok 1\n" +
+					"not ok 2 # TODO sune must fix\n";
+
+			var parser = new TestAnythingProtocolParser(CreateMemoryStream(tapContent));
+			var results = parser.Parse().Tests.ToList();
+
+			var result = results[1];
+
+			Assert.True(result.Todo);
+			Assert.Equal(TestResult.NotOk, result.Status);
+			Assert.Empty(result.Description);
+			Assert.Equal("sune must fix", result.Directive);
 		}
 	}
 }
