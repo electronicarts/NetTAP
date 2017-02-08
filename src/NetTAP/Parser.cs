@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 
 
@@ -26,7 +24,9 @@ namespace NetTAP
 		YamlStart,
 		YamlEnd,
 		YamlContent,
-		TestPlan
+		TestPlan,
+		Diagnostic,
+		BailOut
 	}
 
 	public class TestPlan
@@ -43,6 +43,9 @@ namespace NetTAP
 		public uint TAPVersion { get; set; }
 		public TestPlan TestPlan { get; set; }
 		public IEnumerable<TestLine> Tests { get; set; }
+		public List<string> DiagnosticMessages { get; set; } = new List<string>();
+		public bool BailedOut { get; set; }
+		public string BailOutMessage { get; set; }
 	}
 
 	public class TestLine
@@ -55,25 +58,41 @@ namespace NetTAP
 		public string YAMLError { get; set; }
 		public bool Todo { get; set; }
 		public bool Skipped { get; set; }
+		public List<string> DiagnosticMessages { get; set; } = new List<string>();
 	}
 
-	public class TestAnythingProtocolParser
+	public class TAPParserException : Exception
+	{
+		public TAPParserException(string message) : base(message) { }
+	}
+
+	public class TAPParser
 	{
 		private static readonly Regex s_testInformation =
 			new Regex(
-				@"(?<status>^(not )?ok\b)\s*(?<index>[0-9]*)\s*-?\s*(?<description>[\S\s-[#]]*\b)\s*#?\s*(?<directive>[\S\s]*\b)?");
-
+				@"(?<status>^(not )?ok\b)\s*(?<index>[0-9]*)\s*-?\s*(?<description>[\S\s-[#]]*)\s*#?\s*(?<directive>[\S\s]*)?");
 		private static readonly Regex s_yamlStartBlock = new Regex(@"(^\s)?---");
 		private static readonly Regex s_yamlEndBlock = new Regex(@"(^\s)?\.\.\.");
 		private static readonly Regex s_tapVersion = new Regex(@"TAP\s+version\s+(?<version>\d*)");
 		private static readonly Regex s_testPlan = new Regex(@"(?<firstplan>\d*)\.\.(?<lastplan>\d*)\s*#?\s*(?<directive>[\S\s]*\b)?");
 		private static readonly Regex s_skippedDirective = new Regex(@"(?i)skip\S*\s+(?<reason>[\S\s]*)");
 		private static readonly Regex s_todoDirective = new Regex(@"(?i)todo\S*\s+(?<reason>[\S\s]*)");
+		private static readonly Regex s_diagnostics = new Regex(@"^\s*#(?<diagnostic>[\S\s]*)");
+		private static readonly Regex s_bailout = new Regex(@"(?i)Bail Out!\s*(?<message>[\S\s]*)");
 
 		private readonly StreamReader m_streamReader;
 		private readonly Deserializer m_deserializer = new Deserializer();
 
-		public TestAnythingProtocolParser(Stream stream)
+		public event Action<TestLine> OnTestResult;
+		public event Action<Exception> OnError;
+		public event Action<uint> OnVersion;
+		public event Action<TestLine, dynamic> OnYaml;
+		public event Action<TestPlan> OnTestPlan;
+		public event Action<TestLine, string> OnTestResultDiagnostic;
+		public event Action<string> OnDiagnostic;
+		public event Action<string> OnBailout;
+
+		public TAPParser(Stream stream)
 		{
 			m_streamReader = new StreamReader(stream, Encoding.UTF8);
 		}
@@ -83,9 +102,12 @@ namespace NetTAP
 			string yamlContent = String.Empty;
 			bool parsingYaml = false;
 
-			TestPlan testPlan = new TestPlan();
+			var testPlan = new TestPlan();
 			var results = new List<TestLine>();
 			uint tapVersion = 0;
+			var sessionDiagnosticMessages = new List<string>();
+			string bailoutMessage = String.Empty;
+			bool bailedOut = false;
 
 			var line = m_streamReader.ReadLine();
 			while (line != null)
@@ -95,12 +117,18 @@ namespace NetTAP
 				switch (parseResult)
 				{
 					case ParseResult.TestResult:
-						results.Add(ParseTestResult(line, (uint)results.Count + 1));
+						var result = ParseTestResult(line, (uint)results.Count + 1);
+						results.Add(result);
+						OnTestResult?.Invoke(result);
 						break;
 					case ParseResult.Error:
-						break;
+						var e = new TAPParserException($"TAP syntax error. Unrecognized line \"{line}\".");
+						OnError?.Invoke(e);
+						throw e;
 					case ParseResult.Version:
-						tapVersion = ParseTAPVersion(line);
+						var v = ParseTAPVersion(line);
+						OnVersion?.Invoke(v);
+						tapVersion = v;
 						break;
 					case ParseResult.YamlStart:
 						parsingYaml = true;
@@ -109,13 +137,40 @@ namespace NetTAP
 					case ParseResult.YamlEnd:
 						parsingYaml = false;
 						using (TextReader tr = new StringReader(yamlContent))
-							results.Last().YAML = m_deserializer.Deserialize(tr);
+						{
+							dynamic yaml = m_deserializer.Deserialize(tr);
+							var testLine = results.Last();
+							testLine.YAML = yaml;
+							OnYaml?.Invoke(testLine, yaml);
+						}
 						break;
 					case ParseResult.YamlContent:
 						yamlContent += line + "\n";
 						break;
 					case ParseResult.TestPlan:
-						testPlan = ParseTestPlan(line);
+						var tp = ParseTestPlan(line);
+						OnTestPlan?.Invoke(tp);
+						testPlan = tp;
+						break;
+					case ParseResult.Diagnostic:
+						string diagnostic = s_diagnostics.Match(line).Groups["diagnostic"].Value.Trim();
+						if (results.Any())
+						{
+							var testLine = results.Last();
+							testLine.DiagnosticMessages.Add(diagnostic);
+							OnTestResultDiagnostic?.Invoke(testLine, diagnostic);
+						}
+						else
+						{
+							sessionDiagnosticMessages.Add(diagnostic);
+							OnDiagnostic?.Invoke(diagnostic);
+						}
+						break;
+					case ParseResult.BailOut:
+						var message = s_bailout.Match(line).Groups["message"].Value.Trim();
+						bailedOut = true;
+						OnBailout?.Invoke(message);
+						bailoutMessage = message;
 						break;
 					default:
 						throw new ArgumentOutOfRangeException();
@@ -130,14 +185,17 @@ namespace NetTAP
 			{
 				for (int i = results.Count+1; i <= testCount; i++)
 				{
-					results.Add(new TestLine
+					var testLine = new TestLine
 					{
 						Description = "",
 						Directive = "",
 						Index = (uint)i,
 						Status = TestResult.NotOk,
 
-					});
+					};
+
+					results.Add(testLine);
+					Task.Run(() => OnTestResult?.Invoke(testLine));
 				}
 			}
 
@@ -145,7 +203,10 @@ namespace NetTAP
 			{
 				TAPVersion = tapVersion,
 				TestPlan = testPlan,
-				Tests = results
+				Tests = results,
+				DiagnosticMessages = sessionDiagnosticMessages,
+				BailOutMessage = bailoutMessage,
+				BailedOut = bailedOut
 			};
 		}
 
@@ -156,6 +217,36 @@ namespace NetTAP
 			return t.Result;
 		}
 
+		private class ParsedDirective
+		{
+			public string Directive { get; set; }
+			public bool Todo { get; set; }
+			public bool Skipped { get; set; }
+		}
+
+		private static ParsedDirective ParseDirective(string input)
+		{
+			var skipMatch = s_skippedDirective.Match(input);
+			var todoMatch = s_todoDirective.Match(input);
+			string directive = input;
+
+			if (skipMatch.Success)
+			{
+				directive = skipMatch.Groups["reason"].Value;
+			}
+			else if (todoMatch.Success)
+			{
+				directive = todoMatch.Groups["reason"].Value;
+			}
+
+			return new ParsedDirective
+			{
+				Skipped = skipMatch.Success,
+				Todo = todoMatch.Success,
+				Directive = directive.Trim()
+			};
+		}
+
 		private static TestPlan ParseTestPlan(string line)
 		{
 			var testPlanMatch = s_testPlan.Match(line);
@@ -163,28 +254,15 @@ namespace NetTAP
 			uint lastTestIndex;
 			uint.TryParse(testPlanMatch.Groups["firstplan"].Value, out firstTestIndex);
 			uint.TryParse(testPlanMatch.Groups["lastplan"].Value, out lastTestIndex);
-
-			string directive = testPlanMatch.Groups["directive"].Value;
-
-			var skipMatch = s_skippedDirective.Match(directive);
-			var todoMatch = s_todoDirective.Match(directive);
-
-			if (skipMatch.Success)
-			{
-				directive = skipMatch.Groups["directive"].Value;
-			}
-			else if (todoMatch.Success)
-			{
-				directive = todoMatch.Groups["directive"].Value;
-			}
+			var directive = ParseDirective(testPlanMatch.Groups["directive"].Value);
 
 			return new TestPlan
 			{
-				Directive = directive,
+				Directive = directive.Directive,
 				FirstTestIndex = firstTestIndex,
 				LastTestIndex = lastTestIndex,
-				Todo = todoMatch.Success,
-				Skipped = skipMatch.Success
+				Todo = directive.Todo,
+				Skipped = directive.Skipped
 			};
 		}
 
@@ -195,10 +273,7 @@ namespace NetTAP
 			uint.TryParse(versionMatch.Groups["version"].Value, out version);
 
 			if (version > 13)
-			{
-				// Log some kind of warning as we most probably
-				// don't support all features
-			}
+				throw new TAPParserException($"TAPParser does not support versions > 13. Was {version}.");
 
 			return version;
 		}
@@ -208,46 +283,31 @@ namespace NetTAP
 			var matches = s_testInformation.Match(line);
 			var status = TestResult.NotOk;
 			if (matches.Groups["status"].Value.ToLower() == "ok")
-			{
 				status = TestResult.Ok;
-			}
 
 			uint index;
 			if (!uint.TryParse(matches.Groups["index"].Value, out index))
 				index = currentIndex;
 
-			string directive = matches.Groups["directive"].Value;
-
-			var skipMatch = s_skippedDirective.Match(directive);
-			var todoMatch = s_todoDirective.Match(directive);
-
-			if (skipMatch.Success)
-				directive = skipMatch.Groups["reason"].Value;
-			else if (todoMatch.Success)
-				directive = todoMatch.Groups["reason"].Value;
+			var directive = ParseDirective(matches.Groups["directive"].Value);
 
 			return new TestLine
 			{
 				Status = status,
 				Index = index,
 				YAML = "",
-				Description = matches.Groups["description"].Value,
-				Directive = directive,
-				Skipped = skipMatch.Success,
-				Todo = todoMatch.Success
+				Description = matches.Groups["description"].Value.Trim(),
+				Directive = directive.Directive,
+				Skipped = directive.Skipped,
+				Todo = directive.Todo
 			};
 		}
 
 		private ParseResult ParseLine(string line, bool yaml)
 		{
+			// YAML End/Content
 			if (yaml)
-			{
-				// YAML End
-				if (s_yamlEndBlock.IsMatch(line))
-					return ParseResult.YamlEnd;
-
-				return ParseResult.YamlContent;
-			}
+				return s_yamlEndBlock.IsMatch(line) ? ParseResult.YamlEnd : ParseResult.YamlContent;
 
 			// YAML Start
 			if (s_yamlStartBlock.IsMatch(line))
@@ -255,21 +315,22 @@ namespace NetTAP
 
 			// TAP Version
 			if (s_tapVersion.IsMatch(line))
-			{
 				return ParseResult.Version;
-			}
+
+			// Diagnostics
+			if (s_diagnostics.IsMatch(line))
+				return ParseResult.Diagnostic;
 
 			// Test Plan
 			if (s_testPlan.IsMatch(line))
-			{
 				return ParseResult.TestPlan;
-			}
 
 			// Test Line
 			if (s_testInformation.IsMatch(line))
-			{
 				return ParseResult.TestResult;
-			}
+
+			if(s_bailout.IsMatch(line))
+				return ParseResult.BailOut;
 
 			return ParseResult.Error;
 		}
