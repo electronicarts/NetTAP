@@ -4,14 +4,21 @@
     "debugType": "portable"
   },
     "dependencies": {
-        "YamlDotNet.NetCore": "1.0.0",
-        "System.Dynamic.Runtime": "4.3.0",
-         "Microsoft.CSharp": "4.3.0"
     },
   "frameworks": {
+    "net46": {
+      "frameworkAssemblies": {
+      },
+      "dependencies": {
+        "YamlDotNet": "4.1.0"
+      }
+    },
     "netstandard1.6": {
       "dependencies": {
-        "NETStandard.Library": "1.6.0"
+        "NETStandard.Library": "1.6.0",
+        "YamlDotNet.NetCore": "1.0.0",
+        "System.Dynamic.Runtime": "4.3.0",
+        "Microsoft.CSharp": "4.3.0"
       }
     }
   }
