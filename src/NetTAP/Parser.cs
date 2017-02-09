@@ -117,9 +117,12 @@ namespace NetTAP
 						OnTestResult?.Invoke(result);
 						break;
 					case ParseResult.Error:
-						var e = new TAPParserException($"TAP syntax error. Unrecognized line \"{line}\".");
-						OnError?.Invoke(e);
-						throw e;
+						if (!string.IsNullOrEmpty(line))
+						{
+							var e = new TAPParserException($"TAP syntax error. Unrecognized line \"{line}\".");
+							OnError?.Invoke(e);
+						}
+						break;
 					case ParseResult.Version:
 						var v = ParseTAPVersion(line);
 						OnVersion?.Invoke(v);
@@ -190,7 +193,7 @@ namespace NetTAP
 					};
 
 					results.Add(testLine);
-					Task.Run(() => OnTestResult?.Invoke(testLine));
+					OnTestResult?.Invoke(testLine);
 				}
 			}
 
