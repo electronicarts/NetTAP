@@ -80,7 +80,6 @@ namespace NetTAP
 		private static readonly Regex s_diagnostics = new Regex(@"^\s*#(?<diagnostic>[\S\s]*)");
 		private static readonly Regex s_bailout = new Regex(@"(?i)Bail Out!\s*(?<message>[\S\s]*)");
 
-		private readonly StreamReader m_streamReader;
 		private readonly Deserializer m_deserializer = new Deserializer();
 
 		public event Action<TestLine> OnTestResult;
@@ -92,13 +91,9 @@ namespace NetTAP
 		public event Action<string> OnDiagnostic;
 		public event Action<string> OnBailout;
 
-		public TAPParser(Stream stream)
+		public TestSession Parse(Stream stream)
 		{
-			m_streamReader = new StreamReader(stream, Encoding.UTF8);
-		}
-
-		public TestSession Parse()
-		{
+			var streamReader = new StreamReader(stream, Encoding.UTF8);
 			string yamlContent = String.Empty;
 			bool parsingYaml = false;
 
@@ -109,7 +104,7 @@ namespace NetTAP
 			string bailoutMessage = String.Empty;
 			bool bailedOut = false;
 
-			var line = m_streamReader.ReadLine();
+			var line = streamReader.ReadLine();
 			while (line != null)
 			{
 				var parseResult = ParseLine(line, parsingYaml);
@@ -176,7 +171,7 @@ namespace NetTAP
 						throw new ArgumentOutOfRangeException();
 				}
 
-				line = m_streamReader.ReadLine();
+				line = streamReader.ReadLine();
 			}
 
 			int testCount = (int)testPlan.LastTestIndex - (int)testPlan.FirstTestIndex + 1;
@@ -210,9 +205,9 @@ namespace NetTAP
 			};
 		}
 
-		public async Task<TestSession> ParseAsync()
+		public async Task<TestSession> ParseAsync(Stream stream)
 		{
-			var t = Task.Run(() => Parse());
+			var t = Task.Run(() => Parse(stream));
 			await t;
 			return t.Result;
 		}

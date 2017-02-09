@@ -112,8 +112,8 @@ namespace NetTAP.Tests
 								"  severity: todo\r\n" +
 								"  ...";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse().Tests.ToList();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent)).Tests.ToList();
 
 			Assert.Equal(4, results.Count);
 
@@ -142,8 +142,8 @@ namespace NetTAP.Tests
 					"  severity: todo\r\n" +
 					"  ...";
 
-			var parser = new TAPParser(new MockAsyncStream(tapContent));
-			var results = parser.Parse().Tests.ToList();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent)).Tests.ToList();
 
 			Assert.True(results.Count == 4, "Expected count is 4");
 
@@ -162,8 +162,8 @@ namespace NetTAP.Tests
 					"ok 1\n" +
 					"not ok 2\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse().Tests.ToList();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent)).Tests.ToList();
 
 			Assert.True(results.Count == 3, "Expected count to be 3 even though only two tests were reported");
 			var thirdResult = results[2];
@@ -179,8 +179,8 @@ namespace NetTAP.Tests
 					"ok 1\n" +
 					"not ok 2 # TODO sune must fix\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse().Tests.ToList();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent)).Tests.ToList();
 
 			var result = results[1];
 
@@ -199,8 +199,8 @@ namespace NetTAP.Tests
 					"not ok 2\n" +
 					"not ok\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse().Tests.ToList();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent)).Tests.ToList();
 
 			Assert.Equal(1u, results[0].Index);
 			Assert.Equal(3u, results[2].Index);
@@ -214,8 +214,8 @@ namespace NetTAP.Tests
 							"ok # TODO Sune\n" +
 							"not ok # Skip Sune\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse().Tests.ToList();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent)).Tests.ToList();
 
 			Assert.Equal(1u, results[0].Index);
 			Assert.Equal(2u, results[1].Index);
@@ -235,8 +235,8 @@ namespace NetTAP.Tests
 				"not ok - ÄÅÖ # Skip Sune\n" +
 				"1..3\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse().Tests.ToList();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent)).Tests.ToList();
 
 			Assert.Equal(3, results.Count);
 
@@ -258,8 +258,8 @@ namespace NetTAP.Tests
 		public void ParsesSkippedTestPlan()
 		{
 			var tapContent =  "1..0 # Skipped: WWW::Wok not installed";
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent));
 			var tests = results.Tests.ToList();
 
 			Assert.Equal(0, tests.Count);
@@ -276,8 +276,8 @@ namespace NetTAP.Tests
 				"ok # TODO Sune\n" +
 				"not ok # Skip Sune\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse().Tests.ToList();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent)).Tests.ToList();
 
 			Assert.Equal(1u, results[0].Index);
 			Assert.Equal(2u, results[1].Index);
@@ -296,8 +296,8 @@ namespace NetTAP.Tests
 					"ok # TODO Sune\n" +
 					"not ok # Skip Sune\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent));
 
 			Assert.Equal(11u, results.TAPVersion);
 		}
@@ -309,8 +309,8 @@ namespace NetTAP.Tests
 					"ok # TODO Sune\n" +
 					"not ok # Skip Sune\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			Assert.Throws<TAPParserException>(() => parser.Parse());
+			var parser = new TAPParser();
+			Assert.Throws<TAPParserException>(() => parser.Parse(CreateMemoryStream(tapContent)));
 		}
 
 		[Fact]
@@ -323,8 +323,8 @@ namespace NetTAP.Tests
 					"# Some test diagnostic\n" +
 					"not ok # Skip Sune\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent));
 
 			Assert.Equal(2, results.DiagnosticMessages.Count);
 			Assert.Equal("Some diagnostics", results.DiagnosticMessages[0]);
@@ -340,8 +340,8 @@ namespace NetTAP.Tests
 					"# Some Sune\n" +
 					"not ok # Skip Sune\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent));
 			var tests = results.Tests.ToList();
 
 			Assert.Equal(0, results.DiagnosticMessages.Count);
@@ -362,8 +362,8 @@ namespace NetTAP.Tests
 			"# Some Sune\n" +
 			"Bail Out! Det ballar ur!\n";
 
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
-			var results = parser.Parse();
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent));
 
 			Assert.True(results.BailedOut);
 			Assert.Equal("Det ballar ur!", results.BailOutMessage);
@@ -375,14 +375,14 @@ namespace NetTAP.Tests
 			var tapContent = "TAP version 13\n";
 			uint version = 0;
 			var ev = new ManualResetEvent(false);
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
+			var parser = new TAPParser();
 			parser.OnVersion += u =>
 			{
 				version = u;
 				ev.Set();
 			};
 
-			var t = parser.ParseAsync();
+			var t = parser.ParseAsync(CreateMemoryStream(tapContent));
 			Assert.True(ev.WaitOne());
 			Assert.Equal(13u, version);
 			t.Wait();
@@ -398,7 +398,7 @@ namespace NetTAP.Tests
 			uint lastIndex = 0;
 
 			var ev = new ManualResetEvent(false);
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
+			var parser = new TAPParser();
 			parser.OnTestPlan += u =>
 			{
 				firstIndex = u.FirstTestIndex;
@@ -406,7 +406,7 @@ namespace NetTAP.Tests
 				ev.Set();
 			};
 
-			var t = parser.ParseAsync();
+			var t = parser.ParseAsync(CreateMemoryStream(tapContent));
 			Assert.True(ev.WaitOne());
 			Assert.Equal(1u, firstIndex);
 			Assert.Equal(5u, lastIndex);
@@ -426,14 +426,14 @@ namespace NetTAP.Tests
 			var diagnosticMessages = new List<string>();
 
 			var ev = new CountdownEvent(2);
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
+			var parser = new TAPParser();
 			parser.OnDiagnostic += message =>
 			{
 				diagnosticMessages.Add(message);
 				ev.Signal();
 			};
 
-			var t = parser.ParseAsync();
+			var t = parser.ParseAsync(CreateMemoryStream(tapContent));
 			ev.Wait();
 			Assert.Equal(2, diagnosticMessages.Count);
 			Assert.Equal("Some diagnostics", diagnosticMessages[0]);
@@ -455,7 +455,7 @@ namespace NetTAP.Tests
 			TestLine testLine = null;
 
 			var ev = new ManualResetEvent(false);
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
+			var parser = new TAPParser();
 			parser.OnTestResultDiagnostic += (tl, message) =>
 			{
 				recievedCount++;
@@ -464,7 +464,7 @@ namespace NetTAP.Tests
 				ev.Set();
 			};
 
-			var t = parser.ParseAsync();
+			var t = parser.ParseAsync(CreateMemoryStream(tapContent));
 			Assert.True(ev.WaitOne());
 			Assert.Equal(1, recievedCount);
 			Assert.Equal("Some test diagnostic", diagnosticsMessage);
@@ -482,7 +482,7 @@ namespace NetTAP.Tests
 					"not ok - Lune\n";
 
 			var ev = new CountdownEvent(3);
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
+			var parser = new TAPParser();
 			TestLine testLine = null;
 			parser.OnTestResult += line =>
 			{
@@ -490,7 +490,7 @@ namespace NetTAP.Tests
 				ev.Signal();
 			};
 
-			var t = parser.ParseAsync();
+			var t = parser.ParseAsync(CreateMemoryStream(tapContent));
 			ev.Wait();
 			
 			Assert.Equal(0, ev.CurrentCount);
@@ -505,14 +505,14 @@ namespace NetTAP.Tests
 			var tapContent = "asdsdagsfad #¤)=/=!(¤=!¤9";
 
 			var ev = new ManualResetEvent(false);
-			var parser = new TAPParser(CreateMemoryStream(tapContent));
+			var parser = new TAPParser();
 
 			parser.OnError += exception =>
 			{
 				ev.Set();
 			};
 			
-			var t = parser.ParseAsync();
+			var t = parser.ParseAsync(CreateMemoryStream(tapContent));
 			Assert.True(ev.WaitOne());
 			Assert.Throws<AggregateException>(() => t.Wait());
 		}
@@ -532,7 +532,7 @@ namespace NetTAP.Tests
 			TestLine line = null;
 			dynamic yaml = null;
 
-			var parser = new TAPParser(new MockAsyncStream(tapContent));
+			var parser = new TAPParser();
 			var ev = new ManualResetEvent(false);
 			parser.OnYaml += (tl, o) =>
 			{
@@ -541,7 +541,7 @@ namespace NetTAP.Tests
 				ev.Set();
 			};
 
-			var t = parser.ParseAsync();
+			var t = parser.ParseAsync(CreateMemoryStream(tapContent));
 			Assert.True(ev.WaitOne());
 			Assert.NotNull(yaml);
 			Assert.NotNull(line);
@@ -560,7 +560,7 @@ namespace NetTAP.Tests
 						"not ok 2 - First line of the input valid\r\n" +
 						"BAIL OUT! SUNE LEFT THE BUILDING!";
 
-			var parser = new TAPParser(new MockAsyncStream(tapContent));
+			var parser = new TAPParser();
 			var ev = new ManualResetEvent(false);
 			string bailoutMessage = String.Empty;
 			parser.OnBailout += s =>
@@ -569,7 +569,7 @@ namespace NetTAP.Tests
 				ev.Set();
 			};
 
-			var t = parser.ParseAsync();
+			var t = parser.ParseAsync(CreateMemoryStream(tapContent));
 			Assert.True(ev.WaitOne());
 			Assert.Equal("SUNE LEFT THE BUILDING!", bailoutMessage);
 			var res = t.Result;
