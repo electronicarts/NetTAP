@@ -576,5 +576,24 @@ namespace NetTAP.Tests
 			var res = t.Result;
 			Assert.True(res.BailedOut);
 		}
+
+		[Fact]
+		public void RecievesParsedStreamCopy()
+		{
+			var tapContent = "TAP version 13\r\n" +
+				"1..4\r\n" +
+				"ok 1 - Input file opened\r\n" +
+				"not ok 2 - First line of the input valid\r\n" +
+				"BAIL OUT! SUNE LEFT THE BUILDING!\r\n";
+
+			var parser = new TAPParser();
+
+			var result = parser.Parse(CreateMemoryStream(tapContent), true);
+			string resultTAPContent;
+			using (var reader = new StreamReader(result.TAPContent, Encoding.UTF8))
+				resultTAPContent = reader.ReadToEnd();
+
+			Assert.Equal(tapContent, resultTAPContent);
+		}
 	}
 }

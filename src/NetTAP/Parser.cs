@@ -47,6 +47,7 @@ namespace NetTAP
 		public List<string> DiagnosticMessages { get; set; } = new List<string>();
 		public bool BailedOut { get; set; }
 		public string BailOutMessage { get; set; }
+		public Stream TAPContent { get; set; }
 	}
 
 	public class TestLine
@@ -98,8 +99,11 @@ namespace NetTAP
 		public event Action<string> OnDiagnostic;
 		public event Action<string> OnBailout;
 
-		public TestSession Parse(Stream stream)
+		public TestSession Parse(Stream stream, bool copyStreamContentToResult = false)
 		{
+			var streamContentCopy = new MemoryStream();
+			var streamWriter = new StreamWriter(streamContentCopy, Encoding.UTF8);
+
 			var streamReader = new StreamReader(stream, Encoding.UTF8);
 			string yamlContent = String.Empty;
 			bool parsingYaml = false;
@@ -114,6 +118,9 @@ namespace NetTAP
 			var line = streamReader.ReadLine();
 			while (line != null)
 			{
+				if(copyStreamContentToResult)
+					streamWriter.WriteLine(line);
+
 				var parseResult = ParseLine(line, parsingYaml);
 
 				switch (parseResult)
@@ -267,7 +274,8 @@ namespace NetTAP
 					}
 				}
 			}
-
+			streamWriter.Flush();
+			streamContentCopy.Position = 0;
 			return new TestSession
 			{
 				TAPVersion = tapVersion,
@@ -275,13 +283,14 @@ namespace NetTAP
 				Tests = results,
 				DiagnosticMessages = sessionDiagnosticMessages,
 				BailOutMessage = bailoutMessage,
-				BailedOut = bailedOut
+				BailedOut = bailedOut,
+				TAPContent = streamContentCopy
 			};
 		}
 
-		public async Task<TestSession> ParseAsync(Stream stream)
+		public async Task<TestSession> ParseAsync(Stream stream, bool copyStreamContentToResult = false)
 		{
-			var t = Task.Run(() => Parse(stream));
+			var t = Task.Run(() => Parse(stream, copyStreamContentToResult));
 			await t;
 			return t.Result;
 		}
