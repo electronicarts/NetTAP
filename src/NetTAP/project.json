@@ -1,10 +1,14 @@
 {
+  "name": "NetTAP",
   "version": "1.0.1-*",
+  "description": "NetTap is a TAP protocol parser for .NET",
+  "copyright": "Electronic Arts",
+  "title": ".NET TAP Parser",
+  "authors": ["Frostbite SEE Team"],
   "buildOptions": {
     "debugType": "portable"
   },
-    "dependencies": {
-    },
+  "dependencies": {},
   "frameworks": {
     "net46": {
       "frameworkAssemblies": {
