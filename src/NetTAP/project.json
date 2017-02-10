@@ -1,6 +1,6 @@
 {
   "name": "NetTAP",
-  "version": "1.0.1-*",
+  "version": "1.0.2-*",
   "description": "NetTAP is a TAP protocol parser for .NET",
   "copyright": "Electronic Arts",
   "title": ".NET TAP Parser",

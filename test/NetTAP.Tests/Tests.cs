@@ -515,7 +515,7 @@ namespace NetTAP.Tests
 			
 			var t = parser.ParseAsync(CreateMemoryStream(tapContent));
 			Assert.True(ev.WaitOne());
-			Assert.Throws<AggregateException>(() => t.Wait());
+			t.Wait();
 		}
 
 		[Fact]

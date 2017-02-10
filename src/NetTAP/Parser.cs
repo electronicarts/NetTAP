@@ -64,7 +64,9 @@ namespace NetTAP
 
 	public class TAPParserException : Exception
 	{
-		public TAPParserException(string message) : base(message) { }
+		public TAPParserException(string message) : base(message)
+		{
+		}
 	}
 
 	public class TAPParser
@@ -72,10 +74,14 @@ namespace NetTAP
 		private static readonly Regex s_testInformation =
 			new Regex(
 				@"(?<status>^(not )?ok\b)\s*(?<index>[0-9]*)\s*-?\s*(?<description>[\S\s-[#]]*)\s*#?\s*(?<directive>[\S\s]*)?");
+
 		private static readonly Regex s_yamlStartBlock = new Regex(@"(^\s)?---");
 		private static readonly Regex s_yamlEndBlock = new Regex(@"(^\s)?\.\.\.");
 		private static readonly Regex s_tapVersion = new Regex(@"TAP\s+version\s+(?<version>\d*)");
-		private static readonly Regex s_testPlan = new Regex(@"(?<firstplan>\d*)\.\.(?<lastplan>\d*)\s*#?\s*(?<directive>[\S\s]*\b)?");
+
+		private static readonly Regex s_testPlan =
+			new Regex(@"(?<firstplan>\d*)\.\.(?<lastplan>\d*)\s*#?\s*(?<directive>[\S\s]*\b)?");
+
 		private static readonly Regex s_skippedDirective = new Regex(@"(?i)skip\S*\s+(?<reason>[\S\s]*)");
 		private static readonly Regex s_todoDirective = new Regex(@"(?i)todo\S*\s+(?<reason>[\S\s]*)");
 		private static readonly Regex s_diagnostics = new Regex(@"^\s*#(?<diagnostic>[\S\s]*)");
@@ -113,20 +119,36 @@ namespace NetTAP
 				switch (parseResult)
 				{
 					case ParseResult.TestResult:
-						var result = ParseTestResult(line, (uint)results.Count + 1);
+						var result = ParseTestResult(line, (uint) results.Count + 1);
 						results.Add(result);
-						OnTestResult?.Invoke(result);
+						try
+						{
+							OnTestResult?.Invoke(result);
+						}
+						catch (Exception e)
+						{
+							SendError(e);
+						}
+
 						break;
 					case ParseResult.Error:
 						if (!string.IsNullOrEmpty(line))
 						{
 							var e = new TAPParserException($"TAP syntax error. Unrecognized line \"{line}\".");
-							OnError?.Invoke(e);
+							SendError(e);
 						}
 						break;
 					case ParseResult.Version:
 						var v = ParseTAPVersion(line);
-						OnVersion?.Invoke(v);
+						try
+						{
+							OnVersion?.Invoke(v);
+						}
+						catch (Exception e)
+						{
+							SendError(e);
+						}
+
 						tapVersion = v;
 						break;
 					case ParseResult.YamlStart:
@@ -140,7 +162,15 @@ namespace NetTAP
 							dynamic yaml = m_deserializer.Deserialize(tr);
 							var testLine = results.Last();
 							testLine.YAML = yaml;
-							OnYaml?.Invoke(testLine, yaml);
+
+							try
+							{
+								OnYaml?.Invoke(testLine, yaml);
+							}
+							catch (Exception e)
+							{
+								SendError(e);
+							}
 						}
 						break;
 					case ParseResult.YamlContent:
@@ -148,7 +178,15 @@ namespace NetTAP
 						break;
 					case ParseResult.TestPlan:
 						var tp = ParseTestPlan(line);
-						OnTestPlan?.Invoke(tp);
+						
+						try
+						{
+							OnTestPlan?.Invoke(tp);
+						}
+						catch (Exception e)
+						{
+							SendError(e);
+						}
 						testPlan = tp;
 						break;
 					case ParseResult.Diagnostic:
@@ -157,18 +195,42 @@ namespace NetTAP
 						{
 							var testLine = results.Last();
 							testLine.DiagnosticMessages.Add(diagnostic);
-							OnTestResultDiagnostic?.Invoke(testLine, diagnostic);
+							
+							try
+							{
+								OnTestResultDiagnostic?.Invoke(testLine, diagnostic);
+							}
+							catch (Exception e)
+							{
+								SendError(e);
+							}
 						}
 						else
 						{
 							sessionDiagnosticMessages.Add(diagnostic);
-							OnDiagnostic?.Invoke(diagnostic);
+							
+							try
+							{
+								OnDiagnostic?.Invoke(diagnostic);
+							}
+							catch (Exception e)
+							{
+								SendError(e);
+							}
 						}
 						break;
 					case ParseResult.BailOut:
 						var message = s_bailout.Match(line).Groups["message"].Value.Trim();
 						bailedOut = true;
-						OnBailout?.Invoke(message);
+						
+						try
+						{
+							OnBailout?.Invoke(message);
+						}
+						catch (Exception e)
+						{
+							SendError(e);
+						}
 						bailoutMessage = message;
 						break;
 					default:
@@ -194,7 +256,15 @@ namespace NetTAP
 					};
 
 					results.Add(testLine);
-					OnTestResult?.Invoke(testLine);
+					
+					try
+					{
+						OnTestResult?.Invoke(testLine);
+					}
+					catch (Exception e)
+					{
+						SendError(e);
+					}
 				}
 			}
 
@@ -214,6 +284,15 @@ namespace NetTAP
 			var t = Task.Run(() => Parse(stream));
 			await t;
 			return t.Result;
+		}
+
+		private void SendError(Exception e)
+		{
+			try
+			{
+				OnError?.Invoke(e);
+			}
+			catch (Exception) { }
 		}
 
 		private class ParsedDirective
