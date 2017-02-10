@@ -12,6 +12,8 @@ The headings should be in this order:
 
 # UNRELEASED
 
+# 1.1.0 - [2017-02-10]
+
 ## Added
 - Added copy of TAP stream to test session results.
 
