@@ -2,11 +2,30 @@
 
 # NetTAP
 
-NetTAP is a library for parsing TAP in C#. It is not a harness in the sense that
-it makes decisions about tests results and instead leaves that to the user.
+NetTAP is a library for parsing the [**T**est **A**nything **P**rotocol (TAP)](https://testanything.org/) in C#. It is not a harness in the sense that it does make decisions about tests results instead of leaving that to the user.
 
 It features both synchronous and asynchronous parsing and supports any type of
 `Stream` (files, network, etc.).
+
+## The protocol
+TAP is a fairly simple line based protocol that can additionally be augmented with [YAML](http://www.yaml.org/), as of TAP 13, for additional structured test information.
+
+```txt
+TAP version 13
+1..8
+#
+# Create a new Board and Tile, then place
+# the Tile onto the board.
+#
+ok 1 - The object is a Board
+ok 2 - Board size is zero
+ok 3 - The object is a Tile
+ok 4 - Get possible places to put the Tile
+ok 5 - Placing the tile produces no error
+ok 6 - Board size is 1
+not ok 7 - Error descrtion goes here
+ok 8 - Something succeeded!
+```
 
 ## Using
 
