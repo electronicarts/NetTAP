@@ -7,7 +7,7 @@ NetTAP is a library for parsing the [**T**est **A**nything **P**rotocol (TAP)](h
 It features both synchronous and asynchronous parsing and supports any type of
 `Stream` (files, network, etc.).
 
-## The protocol
+## The Protocol
 TAP is a fairly simple line based protocol that can additionally be augmented with [YAML](http://www.yaml.org/), as of TAP 13, for additional structured test information.
 
 ```txt
