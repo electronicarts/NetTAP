@@ -1,16 +1,15 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26114.2
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NetTAP", "src\NetTAP\NetTAP.xproj", "{25C8ED07-15AE-460B-9A2A-048BA00B561D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetTAP", "src\NetTAP\NetTAP.csproj", "{25C8ED07-15AE-460B-9A2A-048BA00B561D}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NetTAP.Tests", "test\NetTAP.Tests\NetTAP.Tests.xproj", "{C48E39DC-D840-447F-B5E3-32B1DC36F465}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetTAP.Tests", "test\NetTAP.Tests\NetTAP.Tests.csproj", "{C48E39DC-D840-447F-B5E3-32B1DC36F465}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EE667034-9916-4E5B-B849-F7258032B9B2}"
 	ProjectSection(SolutionItems) = preProject
 		CHANGELOG.md = CHANGELOG.md
-		global.json = global.json
 		README.md = README.md
 	EndProjectSection
 EndProject

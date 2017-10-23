@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>NetTAP is a TAP protocol parser for .NET</Description>
+    <Copyright>Electronic Arts</Copyright>
+    <AssemblyTitle>.NET TAP Parser</AssemblyTitle>
+    <VersionPrefix>1.1.0</VersionPrefix>
+    <Authors>Frostbite SEE Team</Authors>
+    <TargetFrameworks>net46;netstandard1.6</TargetFrameworks>
+    <DebugType>portable</DebugType>
+    <AssemblyName>NetTAP</AssemblyName>
+    <PackageId>NetTAP</PackageId>
+    <NetStandardImplicitPackageVersion Condition=" '$(TargetFramework)' == 'netstandard1.6' ">1.6.0</NetStandardImplicitPackageVersion>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net46' ">
+    <PackageReference Include="YamlDotNet" Version="4.1.0" />
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <PackageReference Include="YamlDotNet.NetCore" Version="1.0.0" />
+    <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.3.0" />
+  </ItemGroup>
+
+</Project>
