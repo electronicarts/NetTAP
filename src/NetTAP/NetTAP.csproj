@@ -4,7 +4,7 @@
     <Description>NetTAP is a TAP protocol parser for .NET</Description>
     <Copyright>Electronic Arts</Copyright>
     <AssemblyTitle>.NET TAP Parser</AssemblyTitle>
-    <VersionPrefix>1.1.0</VersionPrefix>
+    <VersionPrefix>1.2.0</VersionPrefix>
     <Authors>Frostbite SEE Team</Authors>
     <TargetFrameworks>net46;netstandard1.6</TargetFrameworks>
     <DebugType>portable</DebugType>

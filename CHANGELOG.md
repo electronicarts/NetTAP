@@ -12,6 +12,8 @@ The headings should be in this order:
 
 # UNRELEASED
 
+# 1.2.0 - [2017-10-27]
+
 ## Changed
 - You can now send a cancellation token to the ParseAsync method which allows you to cancel the parsing. If this token is cancelled it will throw a TaskCanceledException (will be recieved as AggregateException since it's thrown inside a task).
 
