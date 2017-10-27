@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace NetTAP.Tests
@@ -120,6 +121,45 @@ namespace NetTAP.Tests
 
 			var firstTest = results.First();
 			Assert.True(firstTest.Description == "Input file opened");
+		}
+
+		[Fact]
+		public void ParseAsyncCancellation()
+		{
+			var tapContent = "TAP version 13\r\n" +
+								"1..4\r\n" +
+								"ok 1 - Input file opened\r\n" +
+								"not ok 2 - First line of the input valid\r\n" +
+								"  ---\r\n" +
+								"  message: \'First line invalid\'\r\n" +
+								"  severity: fail\r\n" +
+								"  data:\r\n" +
+								"    got: \'Flirble\'\r\n" +
+								"    expect: \'Fnible\'\r\n" +
+								"  ...\r\n" +
+								"ok 3 - Read the rest of the file\r\n" +
+								"not ok 4 - Summarized correctly # TODO Not written yet\r\n" +
+								"  ---\r\n" +
+								"  message: \"Can\'t make summary yet\"\r\n" +
+								"  severity: todo\r\n" +
+								"  ...";
+
+			var parser = new TAPParser();
+			var tokenSource = new CancellationTokenSource();
+			var token = tokenSource.Token;
+			tokenSource.Cancel();
+			bool recievedCancelledException = false;
+			try
+			{
+				var res = parser.ParseAsync(CreateMemoryStream(tapContent), false, token).Result;
+			}
+			catch (AggregateException e)
+			{
+				if(e?.InnerException.GetType() == typeof(TaskCanceledException))
+					recievedCancelledException = true;	
+			}
+			
+			Assert.True(recievedCancelledException, "Failed to catch task cancelled exception.");
 		}
 
 		[Fact]

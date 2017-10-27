@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
@@ -99,7 +100,7 @@ namespace NetTAP
 		public event Action<string> OnDiagnostic;
 		public event Action<string> OnBailout;
 
-		public TestSession Parse(Stream stream, bool copyStreamContentToResult = false)
+		public async Task<TestSession> ParseAsync(Stream stream, bool copyStreamContentToResult = false, CancellationToken token = new CancellationToken())
 		{
 			var streamContentCopy = new MemoryStream();
 			var streamWriter = new StreamWriter(streamContentCopy, Encoding.UTF8);
@@ -115,9 +116,16 @@ namespace NetTAP
 			string bailoutMessage = String.Empty;
 			bool bailedOut = false;
 
-			var line = streamReader.ReadLine();
+			token.ThrowIfCancellationRequested();
+
+			var taskString = streamReader.ReadLineAsync();
+			await taskString;
+			var line = taskString.Result;
+
 			while (line != null)
 			{
+				token.ThrowIfCancellationRequested();
+
 				if(copyStreamContentToResult)
 					streamWriter.WriteLine(line);
 
@@ -244,7 +252,9 @@ namespace NetTAP
 						throw new ArgumentOutOfRangeException();
 				}
 
-				line = streamReader.ReadLine();
+				taskString = streamReader.ReadLineAsync();
+				await taskString;
+				line = taskString.Result;
 			}
 
 			int testCount = (int)testPlan.LastTestIndex - (int)testPlan.FirstTestIndex + 1;
@@ -253,6 +263,8 @@ namespace NetTAP
 			{
 				for (int i = results.Count+1; i <= testCount; i++)
 				{
+					token.ThrowIfCancellationRequested();
+
 					var testLine = new TestLine
 					{
 						Description = "",
@@ -288,11 +300,19 @@ namespace NetTAP
 			};
 		}
 
-		public async Task<TestSession> ParseAsync(Stream stream, bool copyStreamContentToResult = false)
+		public TestSession Parse(Stream stream, bool copyStreamContentToResult = false)
 		{
-			var t = Task.Run(() => Parse(stream, copyStreamContentToResult));
-			await t;
-			return t.Result;
+			try
+			{
+				return ParseAsync(stream, copyStreamContentToResult).Result;
+			}
+			catch(AggregateException e)
+			{
+				if(e?.InnerException.GetType() == typeof(TAPParserException))
+					throw e.InnerException;
+
+				throw e;
+			}
 		}
 
 		private void SendError(Exception e)
