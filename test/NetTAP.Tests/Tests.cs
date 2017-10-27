@@ -291,7 +291,7 @@ namespace NetTAP.Tests
 			Assert.True(results[1].Skipped);
 			Assert.Equal("ÄÅÖ", results[1].Description);
 
-			Assert.Equal(results[2].Status, TestResult.NotOk);
+			Assert.Equal(TestResult.NotOk, results[2].Status);
 			Assert.Equal("", results[2].Description);
 		}
 
@@ -303,7 +303,7 @@ namespace NetTAP.Tests
 			var results = parser.Parse(CreateMemoryStream(tapContent));
 			var tests = results.Tests.ToList();
 
-			Assert.Equal(0, tests.Count);
+			Assert.Empty(tests);
 			Assert.Equal(0u, results.TestPlan.LastTestIndex);
 			Assert.Equal(1u, results.TestPlan.FirstTestIndex);
 			Assert.Equal("WWW::Wok not installed", results.TestPlan.Directive);
@@ -385,13 +385,12 @@ namespace NetTAP.Tests
 			var results = parser.Parse(CreateMemoryStream(tapContent));
 			var tests = results.Tests.ToList();
 
-			Assert.Equal(0, results.DiagnosticMessages.Count);
-
+			Assert.Empty(results.DiagnosticMessages);
 			Assert.Equal(2, tests[0].DiagnosticMessages.Count);
 			Assert.Equal("Some test diagnostic", tests[0].DiagnosticMessages[0]);
 			Assert.Equal("Some Sune", tests[0].DiagnosticMessages[1]);
 
-			Assert.Equal(0, tests[1].DiagnosticMessages.Count);
+			Assert.Empty(tests[1].DiagnosticMessages);
 		}
 
 		[Fact]
