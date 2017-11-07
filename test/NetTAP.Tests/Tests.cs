@@ -674,8 +674,8 @@ namespace NetTAP.Tests
 
 			Assert.True(results.Count == 4, "Expected count is 4");
 
-			var secondResultg = results[1];
-			Assert.Equal(secondResultg.YAML["got"], "some unexpected dots ...");
+			var secondResult = results[1];
+			Assert.Equal(secondResult.YAML["got"], "some unexpected dots ...");
 
 			var fourthResult = results[3];
 			Assert.Equal(fourthResult.YAML["message"], "Can\'t make --- yet");
