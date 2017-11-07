@@ -12,6 +12,8 @@ The headings should be in this order:
 
 # UNRELEASED
 
+# 1.2.1 - [2017-11-07]
+
 ## Fixed
 - Parsing error that could occur if yaml content contained "..." or "---" which resulted in the parser getting confused.
 
