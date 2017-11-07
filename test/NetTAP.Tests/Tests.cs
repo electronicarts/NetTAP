@@ -634,5 +634,52 @@ namespace NetTAP.Tests
 
 			Assert.Equal(tapContent, resultTAPContent);
 		}
+
+		[Fact]
+		public void ParseYamlContentWithDotsAndDashes()
+		{
+			var tapContent = "TAP version 13\r\n" +
+					"1..4\r\n" +
+					"ok 1 - Input file opened\r\n" +
+					"not ok 2 - First line of the input valid\r\n" +
+					"  ---\r\n" +
+					"  got: \'some unexpected dots ...\'\r\n" +
+					"  expect: \'some unexpected dashes\'\r\n" +
+					"  ...\r\n" +
+					"ok 3 - Read the rest of the file\r\n" +
+					"not ok 4 - Summarized correctly # TODO Not written yet\r\n" +
+					"  ---\r\n" +
+					"  message: \"Can\'t make --- yet\"\r\n" +
+					"  severity: ...\r\n" +
+					"  ...";
+
+			var errored = false;
+			var bailedOut = false;
+			var parser = new TAPParser();
+
+			parser.OnError += exception =>
+			{
+				errored = true;
+			};
+
+			parser.OnBailout += message =>
+			{
+				bailedOut = true;
+			};
+
+			var results = parser.Parse(CreateMemoryStream(tapContent)).Tests.ToList();
+
+			Assert.False(errored, "Expected nettap to successfully parse content.");
+			Assert.False(bailedOut, "Expected nettap to successfully parse content.");
+
+			Assert.True(results.Count == 4, "Expected count is 4");
+
+			var secondResult = results[1];
+			Assert.Equal(secondResult.YAML["got"], "some unexpected dots ...");
+
+			var fourthResult = results[3];
+			Assert.Equal(fourthResult.YAML["message"], "Can\'t make --- yet");
+			Assert.Equal(fourthResult.YAML["severity"], "...");
+		}
 	}
 }

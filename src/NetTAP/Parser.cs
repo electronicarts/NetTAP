@@ -77,8 +77,8 @@ namespace NetTAP
 			new Regex(
 				@"(?<status>^(not )?ok\b)\s*(?<index>[0-9]*)\s*-?\s*(?<description>[\S\s-[#]]*)\s*#?\s*(?<directive>[\S\s]*)?");
 
-		private static readonly Regex s_yamlStartBlock = new Regex(@"(^\s)?---");
-		private static readonly Regex s_yamlEndBlock = new Regex(@"(^\s)?\.\.\.");
+		private static readonly Regex s_yamlStartBlock = new Regex(@"^\s+(---)$");
+		private static readonly Regex s_yamlEndBlock = new Regex(@"^\s+(\.\.\.)$");
 		private static readonly Regex s_tapVersion = new Regex(@"TAP\s+version\s+(?<version>\d*)");
 
 		private static readonly Regex s_testPlan =
