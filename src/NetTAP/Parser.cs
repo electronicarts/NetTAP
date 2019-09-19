@@ -1,4 +1,4 @@
-// Copyright (C) Electronic Arts Inc. All rights reserved.
+// Copyright (C) 2019 Electronic Arts Inc. All rights reserved.
 using System;
 using System.Collections.Generic;
 using System.IO;
