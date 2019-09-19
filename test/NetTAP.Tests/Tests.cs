@@ -124,6 +124,36 @@ namespace NetTAP.Tests
 		}
 
 		[Fact]
+		public void ParseUTF8()
+		{
+			var tapContent = "TAP version 13\r\n" +
+								"1..4\r\n" +
+								"ok 1 - Input file opened ê 📰 📝\r\n" +
+								"not ok 2 - First line of the input valid\r\n" +
+								"  ---\r\n" +
+								"  message: \'First line 🔥 invalid\'\r\n" +
+								"  severity: fail\r\n" +
+								"  data:\r\n" +
+								"    got: \'🔈\'\r\n" +
+								"    expect: \'🔇\'\r\n" +
+								"  ...\r\n" +
+								"ok 3 - Read the rest of the file\r\n" +
+								"not ok 4 - Summarized correctly # TODO 🐛 Not written yet\r\n" +
+								"  ---\r\n" +
+								"  message: \"Can\'t make 🐧 yet\"\r\n" +
+								"  severity: todo\r\n" +
+								"  ...";
+
+			var parser = new TAPParser();
+			var results = parser.Parse(CreateMemoryStream(tapContent)).Tests.ToList();
+
+			Assert.Equal(4, results.Count);
+
+			var firstTest = results.First();
+			Assert.True(firstTest.Description == "Input file opened ê 📰 📝");
+		}
+
+		[Fact]
 		public void ParseAsyncCancellation()
 		{
 			var tapContent = "TAP version 13\r\n" +
